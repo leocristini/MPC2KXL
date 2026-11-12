@@ -22,22 +22,37 @@
   const takenNames = (exceptId) => new Set(state.items.filter((it) => it.id !== exceptId).map((it) => it.name));
 
   // ---------- render ----------
+  function play(it, padSettings) {
+    try { MPC.audio.play(it.out.chans, padSettings); }
+    catch (e) { MPC.view.setStatus("Playback is blocked in this view.", true); }
+  }
+
   const handlers = {
     onRename(it, value) {
       it.name = uniqueName(cleanName(value) || baseName(it.file.name), takenNames(it.id));
+      program.render();
       return it.name;
     },
-    onPlay(it) {
-      try { MPC.audio.play(it.out.chans); }
-      catch (e) { MPC.view.setStatus("Playback is blocked in this view.", true); }
-    },
+    onPlay(it) { play(it); },
     onRemove(it) {
       state.items = state.items.filter((x) => x !== it);
+      program.removeItem(it.id);
       render();
     },
   };
 
-  const render = () => MPC.view.render(state.items, settings(), handlers);
+  const program = MPC.program.create({
+    items: () => state.items,
+    findItem: (id) => state.items.find((it) => it.id === id),
+    play,
+    addFiles: (files, onCreated) => addFiles(files, onCreated),
+    changed: () => {},
+  });
+
+  const render = () => {
+    MPC.view.render(state.items, settings(), handlers);
+    program.render();
+  };
 
   // Re-run DSP for every decoded item after a setting changes.
   function reprocess() {
@@ -47,12 +62,16 @@
   }
 
   // ---------- intake ----------
-  async function addFiles(list) {
+  // onCreated(items) runs once the new items exist, before decoding (used to drop files straight onto pads).
+  async function addFiles(list, onCreated) {
+    const created = [];
     for (const file of Array.from(list)) {
       const it = { id: nextId++, file, raw: null, out: null, error: false, name: "" };
       it.name = uniqueName(baseName(file.name), takenNames(it.id));
       state.items.push(it);
+      created.push(it);
     }
+    if (onCreated) onCreated(created);
     render();
 
     for (const it of state.items.filter((x) => !x.raw && !x.error)) {
@@ -65,6 +84,7 @@
       render();
     }
     MPC.view.setStatus(state.items.filter((x) => x.out).length + " ready. Files stay in your browser.");
+    return created;
   }
 
   // ---------- export ----------
@@ -77,14 +97,29 @@
     });
   }
 
-  async function download() {
-    const s = settings();
-    const files = buildFiles(s);
-    const filename = "MPC_" + (s.fmt === "snd" ? "SND" : "WAV") + "_" + files.length + ".zip";
+  async function saveZip(files, filename) {
     const result = await MPC.save.save(MPC.zip.buildZip(files), filename);
-    if (result === "saved") MPC.view.setStatus("Saved " + files.length + " files.");
+    if (result === "saved") MPC.view.setStatus("Saved " + filename + " (" + files.length + " files).");
     else if (result === "declined") MPC.view.setStatus("Download cancelled.");
     else MPC.view.setStatus("A save prompt is already open. Finish it, then try again.", true);
+  }
+
+  function download() {
+    const s = settings();
+    const files = buildFiles(s);
+    return saveZip(files, "MPC_" + (s.fmt === "snd" ? "SND" : "WAV") + "_" + files.length + ".zip");
+  }
+
+  // Program ZIP: NAME.PGM plus a .SND for every sample used on a pad (programs load sounds by name).
+  function downloadProgram() {
+    const built = program.build();
+    if (!built) return;
+    const s = settings();
+    const files = [{ name: built.fileName + ".PGM", data: MPC.pgm.encodePgm(built.program) }];
+    for (const it of built.items) {
+      files.push({ name: it.name + ".SND", data: MPC.snd.encodeSnd(MPC.pcm.toInt16(it.out.chans, s.dither), it.name) });
+    }
+    return saveZip(files, built.fileName + ".zip");
   }
 
   // ---------- wiring ----------
@@ -100,8 +135,14 @@
 
   document.querySelectorAll('input[name="fmt"], input[name="ch"], #opt-norm, #opt-trim, #opt-dither, #ram')
     .forEach((el) => el.addEventListener("change", reprocess));
-  $("clear").addEventListener("click", () => { state.items = []; render(); MPC.view.setStatus("Cleared."); });
+  $("clear").addEventListener("click", () => {
+    state.items.forEach((it) => program.removeItem(it.id));
+    state.items = [];
+    render();
+    MPC.view.setStatus("Cleared.");
+  });
   $("dl").addEventListener("click", download);
+  $("dl-pgm").addEventListener("click", downloadProgram);
 
   render();
   MPC.save.init();

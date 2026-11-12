@@ -39,6 +39,14 @@
     } else if (!it.out) {
       td("", "Decoding…").colSpan = 5;
     } else {
+      // Rows of decoded samples can be dragged onto program pads.
+      tr.draggable = true;
+      tr.className = "draggable";
+      tr.addEventListener("dragstart", (e) => {
+        e.dataTransfer.setData(MPC.program.MIME_ITEM, String(it.id));
+        e.dataTransfer.effectAllowed = "copy";
+      });
+
       const inp = document.createElement("input");
       inp.type = "text"; inp.className = "name"; inp.maxLength = MPC.NAME_LENGTH; inp.value = it.name; inp.id = "name-" + it.id;
       inp.setAttribute("aria-label", "MPC name for " + it.file.name);

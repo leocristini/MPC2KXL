@@ -74,8 +74,66 @@
     </div>
   </section>
 
+  <section class="box stack program" aria-label="Program">
+    <div class="program-head">
+      <div>
+        <h2>Program</h2>
+        <p class="hint">Drag samples from the table, or audio files from your computer, onto a pad. Drag a pad onto another to swap them. Click a pad to hear it and edit it.</p>
+      </div>
+      <div class="settings">
+        <label class="field"><span>Program name</span>
+          <input type="text" id="pgm-name" maxlength="16" value="NewPgm-A" spellcheck="false" autocomplete="off">
+        </label>
+        <div class="field"><span>Bank</span>
+          <div class="seg" role="radiogroup" aria-label="Pad bank">
+            <input type="radio" name="bank" id="bank-a" value="0" checked><label for="bank-a">A</label>
+            <input type="radio" name="bank" id="bank-b" value="1"><label for="bank-b">B</label>
+            <input type="radio" name="bank" id="bank-c" value="2"><label for="bank-c">C</label>
+            <input type="radio" name="bank" id="bank-d" value="3"><label for="bank-d">D</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="program-body">
+      <div class="pads" id="pads" aria-label="Pads"></div>
+
+      <aside class="pad-editor" aria-label="Pad settings">
+        <div class="pe-head"><strong id="pe-title">A01</strong></div>
+        <label class="field"><span>Sample</span><select id="pe-sound"></select></label>
+        <fieldset id="pe-fields" class="pe-fields">
+          <label class="field"><span>Tune (semitones)</span><input type="number" id="pe-tune" min="-12" max="12" step="0.1" value="0"></label>
+          <label class="field"><span>Attack</span><input type="number" id="pe-attack" min="0" max="100" step="1" value="0"></label>
+          <label class="field"><span>Decay</span><input type="number" id="pe-decay" min="0" max="100" step="1" value="5"></label>
+          <label class="field"><span>Voice overlap</span>
+            <select id="pe-overlap">
+              <option value="poly">Poly</option>
+              <option value="mono">Mono</option>
+              <option value="noteoff">Note off</option>
+            </select>
+          </label>
+          <label class="field"><span>Volume <output id="pe-volume-out">100</output></span><input type="range" id="pe-volume" min="0" max="100" value="100"></label>
+          <label class="field"><span>Pan <output id="pe-pan-out">C</output></span><input type="range" id="pe-pan" min="0" max="100" value="50"></label>
+          <div class="row-gap">
+            <button type="button" id="pe-play">Play</button>
+            <button type="button" id="pe-clear">Clear pad</button>
+          </div>
+        </fieldset>
+      </aside>
+    </div>
+
+    <div class="actions">
+      <span class="status" id="pgm-count">No pads assigned</span>
+      <div class="row-gap">
+        <button id="pgm-clear" type="button">Clear pads</button>
+        <button id="dl-pgm" class="primary" type="button" disabled>Download program</button>
+      </div>
+    </div>
+  </section>
+
   <section class="notes" aria-label="Notes">
     <p><strong>Loading on the MPC:</strong> unzip, copy the files to the root of a FAT16 card or partition (SCSI2SD / CF mod), then LOAD on the MPC. With a Gotek, put them inside 1.44 MB floppy images; one image holds about 16 s of mono audio.</p>
+    <p><strong>Programs:</strong> "Download program" gives a ZIP with <code>NAME.PGM</code> and a .SND for every sample on a pad (always .SND, using the processing settings above). Copy them all to the same folder, then load the .PGM on the MPC and choose to load its sounds too. Pads use the MPC's factory note layout (A01 = note 37).</p>
     <p><strong>WAV or .SND:</strong> the 2000XL reads both. WAV is the safest choice. .SND files use the native 42-byte header (name, level 100, tune 0, end point set to full length, loop off). Stereo .SND writes the left channel then the right, the way the MPC stores them.</p>
   </section>
 </div>
@@ -88,9 +146,11 @@
 <script src="src/js/core/zip.js"></script>
 <script src="src/js/core/names.js"></script>
 <script src="src/js/core/process.js"></script>
+<script src="src/js/core/pgm.js"></script>
 <script src="src/js/audio/decode.js"></script>
 <script src="src/js/ui/save.js"></script>
 <script src="src/js/ui/render.js"></script>
+<script src="src/js/ui/program.js"></script>
 <script src="src/js/ui/app.js"></script>
 </body>
 </html>

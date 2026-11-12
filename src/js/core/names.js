@@ -20,5 +20,8 @@
     return want;
   }
 
-  MPC.names = { baseName, cleanName, uniqueName };
+  // Program names: up to 16 chars, mixed case and spaces allowed (e.g. "NewPgm-A").
+  function cleanProgramName(v) { return v.replace(/[^A-Za-z0-9 _-]/g, "").slice(0, 16).trim(); }
+
+  MPC.names = { baseName, cleanName, uniqueName, cleanProgramName };
 })();

@@ -19,13 +19,26 @@
 
   let playing = null;
   // Plays Float32 channels; throws if audio is blocked.
-  function play(chans) {
+  // opts (optional, pad settings): tune in tenths of a semitone, volume 0..100, pan 0..100 (50 = centre).
+  function play(chans, opts = {}) {
     const a = ctx();
+    if (a.state === "suspended") a.resume();
     if (playing) { try { playing.stop(); } catch (e) {} }
     const b = a.createBuffer(chans.length, chans[0].length, MPC.RATE);
     chans.forEach((c, i) => b.copyToChannel(c, i));
     const src = a.createBufferSource();
-    src.buffer = b; src.connect(a.destination); src.start();
+    src.buffer = b;
+    src.playbackRate.value = Math.pow(2, (opts.tune || 0) / 120);
+    const gain = a.createGain();
+    gain.gain.value = (opts.volume ?? 100) / 100;
+    let node = src.connect(gain);
+    if (a.createStereoPanner) {
+      const pan = a.createStereoPanner();
+      pan.pan.value = ((opts.pan ?? 50) - 50) / 50;
+      node = node.connect(pan);
+    }
+    node.connect(a.destination);
+    src.start();
     playing = src;
   }
 
