@@ -6,137 +6,188 @@
 <title>MPC2000XL Sample Prep</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=VT323&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="src/styles/main.css">
 </head>
 <body>
-<div class="wrap">
-  <header class="unit">
-    <div>
-      <h1><b>MPC2000XL</b> Sample Prep</h1>
-      <p class="sub">Drop WAV, MP3, AIFF or FLAC files. They come out as 16-bit / 44.1 kHz WAV or native .SND with 8-character names, zipped and ready to copy to your card.</p>
-    </div>
-    <div class="lcd" id="lcd" aria-live="polite">
-      <div class="row"><span>SAMPLE MEM</span><span id="memLabel">0.00 / 2.00 MB</span></div>
-      <div class="bar"><i id="memBar"></i></div>
-      <div class="row"><span id="memCount">0 SOUNDS</span><span id="memTime">0.0 s MONO</span></div>
-    </div>
-  </header>
+<main class="wrap">
 
-  <section class="box settings" aria-label="Output settings">
-    <div class="field"><span>Format</span>
-      <div class="seg" role="radiogroup">
-        <input type="radio" name="fmt" id="fmt-wav" value="wav" checked><label for="fmt-wav">WAV</label>
-        <input type="radio" name="fmt" id="fmt-snd" value="snd"><label for="fmt-snd">.SND</label>
-      </div>
-    </div>
-    <div class="field"><span>Channels</span>
-      <div class="seg" role="radiogroup">
-        <input type="radio" name="ch" id="ch-mono" value="mono" checked><label for="ch-mono">Mono</label>
-        <input type="radio" name="ch" id="ch-keep" value="keep"><label for="ch-keep">Keep</label>
-      </div>
-    </div>
-    <div class="field"><span>MPC RAM</span>
-      <select id="ram">
-        <option value="2">2 MB (stock)</option>
-        <option value="8">8 MB</option>
-        <option value="16">16 MB</option>
-        <option value="32">32 MB (max)</option>
-      </select>
-    </div>
-    <div class="field"><span>Processing</span>
-      <div class="checks">
-        <label class="check"><input type="checkbox" id="opt-norm" checked> Normalize</label>
-        <label class="check"><input type="checkbox" id="opt-trim" checked> Trim silence</label>
-        <label class="check"><input type="checkbox" id="opt-dither" checked> Dither</label>
-      </div>
-    </div>
-  </section>
+  <div class="device" id="device" role="application" aria-label="MPC2000XL sample prep">
 
-  <section class="box stack">
-    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add audio files">
-      <strong>Drop samples here</strong> or click to choose files
-      <input type="file" id="file" accept="audio/*,.wav,.mp3,.aif,.aiff,.flac,.ogg,.m4a" multiple hidden>
-    </div>
-    <div class="tablewrap">
-      <table>
-        <thead><tr><th>Source</th><th>MPC name</th><th>Length</th><th>Ch</th><th>Out size</th><th>Peak</th><th></th></tr></thead>
-        <tbody id="rows"></tbody>
-      </table>
-      <div class="empty" id="empty">No samples yet. Example: <code>Kick Dusty 01.mp3</code> becomes <code>KICKDUST.WAV</code>, mono, 16-bit, 44.1 kHz.</div>
-    </div>
-    <div class="actions">
-      <span class="status" id="status">Files are processed in your browser and never uploaded.</span>
-      <div class="row-gap">
-        <button id="clear" type="button">Clear all</button>
-        <button id="dl" class="primary" type="button" disabled>Download ZIP</button>
-      </div>
-    </div>
-  </section>
+    <!-- ================= LEFT: display, soft keys, keypad, wheel, fader, transport ================= -->
+    <div class="side-left">
 
-  <section class="box stack program" aria-label="Program">
-    <div class="program-head">
-      <div>
-        <h2>Program</h2>
-        <p class="hint">Drag samples from the table, or audio files from your computer, onto a pad. Drag a pad onto another to swap them. Click a pad to hear it and edit it.</p>
+      <div class="lcd-bezel">
+        <div class="lcd" id="lcd" aria-live="polite">
+          <div class="lcd-top">
+            <span class="lcd-mode" id="lcd-mode">SOUND</span>
+            <span class="lcd-mem">Mem:<span class="bar" aria-hidden="true"><i id="memBar"></i></span><span id="memLabel">0.00 / 2.00 MB</span></span>
+          </div>
+          <div class="lcd-sub"><span id="memCount">0 SOUNDS</span><span id="memTime">0.0 s MONO FREE</span></div>
+
+          <!-- F1: sound list -->
+          <section class="lcd-screen" id="screen-sound" data-screen="sound" aria-label="Sounds">
+            <table>
+              <thead><tr><th>Source</th><th>Name</th><th>Len</th><th>Ch</th><th>Size</th><th>Peak</th><th></th></tr></thead>
+              <tbody id="rows"></tbody>
+            </table>
+            <div class="empty" id="empty">No sounds in memory.<br>Press LOAD, or drop audio files anywhere on the unit.<br>"Kick Dusty 01.mp3" &rarr; KICKDUST, 16-bit 44.1kHz</div>
+          </section>
+
+          <!-- F2: program / pad editor -->
+          <section class="lcd-screen" id="screen-pgm" data-screen="pgm" aria-label="Program" hidden>
+            <div class="pe-line">
+              <label class="lf">Pgm:<input type="text" id="pgm-name" maxlength="16" value="NewPgm-A" spellcheck="false" autocomplete="off"></label>
+              <span class="lf right" id="pe-title">A01 NOTE 37</span>
+            </div>
+            <div class="pe-line">
+              <label class="lf grow">Snd:<select id="pe-sound"></select></label>
+              <span class="lf right" id="pe-len">EMPTY</span>
+            </div>
+            <canvas id="pe-wave" aria-hidden="true"></canvas>
+            <fieldset id="pe-fields" class="pe-fields">
+              <label class="lf">Tune:<input type="number" id="pe-tune" min="-12" max="12" step="0.1" value="0"></label>
+              <label class="lf">Attack:<input type="number" id="pe-attack" min="0" max="100" step="1" value="0"></label>
+              <label class="lf">Decay:<input type="number" id="pe-decay" min="0" max="100" step="1" value="5"></label>
+              <label class="lf">Mode:<select id="pe-overlap">
+                <option value="poly">POLY</option>
+                <option value="mono">MONO</option>
+                <option value="noteoff">NOTE OFF</option>
+              </select></label>
+              <label class="lf wide">Level:<input type="range" id="pe-volume" min="0" max="100" value="100"><output id="pe-volume-out">100</output></label>
+              <label class="lf wide">Pan:<input type="range" id="pe-pan" min="0" max="100" value="50"><output id="pe-pan-out">C</output></label>
+              <div class="lf wide lcd-btns">
+                <button type="button" id="pe-play">Play</button>
+                <button type="button" id="pe-clear">Clear pad</button>
+                <span id="pgm-count">No pads assigned</span>
+              </div>
+            </fieldset>
+          </section>
+
+          <div class="lcd-msg" id="status">Files stay in your browser.</div>
+          <div class="lcd-tabs" aria-hidden="true">
+            <span data-for="sound" class="on">SOUND</span><span data-for="pgm">PGM</span><span></span><span></span><span></span><span></span>
+          </div>
+          <div class="lcd-drop" aria-hidden="true">DROP FILES TO LOAD</div>
+        </div>
       </div>
-      <div class="settings">
-        <label class="field"><span>Program name</span>
-          <input type="text" id="pgm-name" maxlength="16" value="NewPgm-A" spellcheck="false" autocomplete="off">
-        </label>
-        <div class="field"><span>Bank</span>
-          <div class="seg" role="radiogroup" aria-label="Pad bank">
-            <input type="radio" name="bank" id="bank-a" value="0" checked><label for="bank-a">A</label>
-            <input type="radio" name="bank" id="bank-b" value="1"><label for="bank-b">B</label>
-            <input type="radio" name="bank" id="bank-c" value="2"><label for="bank-c">C</label>
-            <input type="radio" name="bank" id="bank-d" value="3"><label for="bank-d">D</label>
+
+      <div class="fkeys">
+        <div class="kw"><span class="lg">F1</span><button type="button" class="k cream fkey" data-screen="sound" aria-label="F1: sound list"></button></div>
+        <div class="kw"><span class="lg">F2</span><button type="button" class="k cream fkey" data-screen="pgm" aria-label="F2: program editor"></button></div>
+        <div class="kw"><span class="lg">F3</span><button type="button" class="k cream" disabled aria-hidden="true" tabindex="-1"></button></div>
+        <div class="kw"><span class="lg">F4</span><button type="button" class="k cream" disabled aria-hidden="true" tabindex="-1"></button></div>
+        <div class="kw"><span class="lg">F5</span><button type="button" class="k cream" disabled aria-hidden="true" tabindex="-1"></button></div>
+        <div class="kw"><span class="lg">F6</span><button type="button" class="k cream" disabled aria-hidden="true" tabindex="-1"></button></div>
+      </div>
+
+      <div class="mid">
+        <!-- Blue keypad: output settings. LED next to the legend shows on/off. -->
+        <div class="keypad" aria-label="Output settings">
+          <input type="radio" name="fmt" id="fmt-wav" value="wav" checked><label class="kw toggle" for="fmt-wav"><span class="lg">WAV</span><span class="k blue"></span></label>
+          <input type="radio" name="fmt" id="fmt-snd" value="snd"><label class="kw toggle" for="fmt-snd"><span class="lg">SND</span><span class="k blue"></span></label>
+          <input type="radio" name="ch" id="ch-mono" value="mono" checked><label class="kw toggle" for="ch-mono"><span class="lg">MONO</span><span class="k blue"></span></label>
+          <input type="radio" name="ch" id="ch-keep" value="keep"><label class="kw toggle" for="ch-keep"><span class="lg">KEEP</span><span class="k blue"></span></label>
+          <label class="kw toggle check"><input type="checkbox" id="opt-norm" checked><span class="lg">NORM</span><span class="k blue"></span></label>
+          <label class="kw toggle check"><input type="checkbox" id="opt-trim" checked><span class="lg">TRIM</span><span class="k blue"></span></label>
+          <label class="kw toggle check"><input type="checkbox" id="opt-dither" checked><span class="lg">DITHER</span><span class="k blue"></span></label>
+          <div class="kw mem"><label class="lg" for="ram">MEMORY</label>
+            <select id="ram" class="k-select">
+              <option value="2">2 MB</option>
+              <option value="8">8 MB</option>
+              <option value="16">16 MB</option>
+              <option value="32">32 MB</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="wheel-area">
+          <div class="screen-keys">
+            <div class="kw"><span class="lg">MAIN SCREEN</span><button type="button" class="k cream wide" id="main-screen" aria-label="Main screen: sound list"></button></div>
+            <div class="kw"><span class="lg">LOAD</span>
+              <div class="k orange wide" id="drop" tabindex="0" role="button" aria-label="Load audio files">
+                <input type="file" id="file" accept="audio/*,.wav,.mp3,.aif,.aiff,.flac,.ogg,.m4a" multiple hidden>
+              </div>
+            </div>
+          </div>
+          <span class="lg">DATA</span>
+          <div class="wheel" id="wheel" role="slider" tabindex="0" aria-label="Data wheel: adjusts the selected pad setting" aria-valuetext="Tune">
+            <div class="wheel-knob"><span class="wheel-dimple"></span></div>
+          </div>
+          <span class="lg small" id="wheel-target">Tune</span>
+        </div>
+      </div>
+
+      <div class="bottom">
+        <div class="nv-box">
+          <span class="box-title">NOTE VARIATION</span>
+          <span class="lg small">TUNE</span>
+          <div class="fader-wrap">
+            <div class="ticks" aria-hidden="true"></div>
+            <input type="range" id="nv-slider" class="fader" min="-120" max="120" step="1" value="0" aria-label="Note variation: tune of the selected pad">
+            <div class="ticks" aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <div class="transport-area">
+          <div class="row-keys">
+            <div class="kw"><span class="lg">CLEAR ALL</span><button id="clear" type="button" class="k cream" aria-label="Clear all sounds"></button></div>
+            <div class="kw"><span class="lg">CLEAR PADS</span><button id="pgm-clear" type="button" class="k cream" aria-label="Clear all pads"></button></div>
+          </div>
+          <div class="locate">
+            <span class="rule-title">SAVE</span>
+            <span class="rule-title right">AUDITION</span>
+          </div>
+          <div class="transport">
+            <div class="kw"><span class="lg"><i class="led red"></i>SAVE SND</span><button id="dl" type="button" class="k red big" disabled aria-label="Download ZIP"></button></div>
+            <div class="kw"><span class="lg"><i class="led red"></i>SAVE PGM</span><button id="dl-pgm" type="button" class="k red big" disabled aria-label="Download program"></button></div>
+            <div class="kw"><span class="lg">STOP</span><button id="stop" type="button" class="k cream big" aria-label="Stop preview"></button></div>
+            <div class="kw"><span class="lg"><i class="led"></i>PLAY</span><button id="play-pad" type="button" class="k cream big" aria-label="Play selected pad"></button></div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="program-body">
-      <div class="pads" id="pads" aria-label="Pads"></div>
-
-      <aside class="pad-editor" aria-label="Pad settings">
-        <div class="pe-head"><strong id="pe-title">A01</strong></div>
-        <label class="field"><span>Sample</span><select id="pe-sound"></select></label>
-        <fieldset id="pe-fields" class="pe-fields">
-          <label class="field"><span>Tune (semitones)</span><input type="number" id="pe-tune" min="-12" max="12" step="0.1" value="0"></label>
-          <label class="field"><span>Attack</span><input type="number" id="pe-attack" min="0" max="100" step="1" value="0"></label>
-          <label class="field"><span>Decay</span><input type="number" id="pe-decay" min="0" max="100" step="1" value="5"></label>
-          <label class="field"><span>Voice overlap</span>
-            <select id="pe-overlap">
-              <option value="poly">Poly</option>
-              <option value="mono">Mono</option>
-              <option value="noteoff">Note off</option>
-            </select>
-          </label>
-          <label class="field"><span>Volume <output id="pe-volume-out">100</output></span><input type="range" id="pe-volume" min="0" max="100" value="100"></label>
-          <label class="field"><span>Pan <output id="pe-pan-out">C</output></span><input type="range" id="pe-pan" min="0" max="100" value="50"></label>
-          <div class="row-gap">
-            <button type="button" id="pe-play">Play</button>
-            <button type="button" id="pe-clear">Clear pad</button>
-          </div>
-        </fieldset>
-      </aside>
-    </div>
-
-    <div class="actions">
-      <span class="status" id="pgm-count">No pads assigned</span>
-      <div class="row-gap">
-        <button id="pgm-clear" type="button">Clear pads</button>
-        <button id="dl-pgm" class="primary" type="button" disabled>Download program</button>
+    <!-- ================= RIGHT: logo, volume, pad bank, drums ================= -->
+    <div class="side-right">
+      <div class="logo-row">
+        <h1 class="logo">MPC2000XL<span>Sample Prep</span></h1>
       </div>
+
+      <div class="grey-panel top-panel">
+        <div class="knob-wrap">
+          <span class="lg">MAIN VOLUME</span>
+          <div class="knob" id="vol-knob" role="slider" tabindex="0" aria-label="Preview volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="80">
+            <div class="knob-cap"><span class="knob-mark"></span></div>
+          </div>
+          <span class="knob-scale"><span>MIN</span><span>MAX</span></span>
+        </div>
+        <div class="bank-area">
+          <span class="rule-title">PAD BANK</span>
+          <div class="bank" role="radiogroup" aria-label="Pad bank">
+            <input type="radio" name="bank" id="bank-a" value="0" checked><label class="kw toggle" for="bank-a"><span class="lg">A</span><span class="k cream"></span></label>
+            <input type="radio" name="bank" id="bank-b" value="1"><label class="kw toggle" for="bank-b"><span class="lg">B</span><span class="k cream"></span></label>
+            <input type="radio" name="bank" id="bank-c" value="2"><label class="kw toggle" for="bank-c"><span class="lg">C</span><span class="k cream"></span></label>
+            <input type="radio" name="bank" id="bank-d" value="3"><label class="kw toggle" for="bank-d"><span class="lg">D</span><span class="k cream"></span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="grey-panel drums">
+        <span class="rule-title center">DRUMS</span>
+        <div class="pads" id="pads" aria-label="Pads"></div>
+      </div>
+      <p class="hint">Drag sounds from the screen, or files from your computer, onto a pad. Drag pad to pad to swap. Hit a pad to hear and edit it.</p>
     </div>
-  </section>
+  </div>
 
   <section class="notes" aria-label="Notes">
     <p><strong>Loading on the MPC:</strong> unzip, copy the files to the root of a FAT16 card or partition (SCSI2SD / CF mod), then LOAD on the MPC. With a Gotek, put them inside 1.44 MB floppy images; one image holds about 16 s of mono audio.</p>
-    <p><strong>Programs:</strong> "Download program" gives a ZIP with <code>NAME.PGM</code> and a .SND for every sample on a pad (always .SND, using the processing settings above). Copy them all to the same folder, then load the .PGM on the MPC and choose to load its sounds too. Pads use the MPC's factory note layout (A01 = note 37).</p>
+    <p><strong>Programs:</strong> SAVE PGM gives a ZIP with <code>NAME.PGM</code> and a .SND for every sample on a pad (always .SND, using the keypad settings). Copy them all to the same folder, then load the .PGM on the MPC and choose to load its sounds too. Pads use the MPC's factory note layout (A01 = note 37).</p>
     <p><strong>WAV or .SND:</strong> the 2000XL reads both. WAV is the safest choice. .SND files use the native 42-byte header (name, level 100, tune 0, end point set to full length, loop off). Stereo .SND writes the left channel then the right, the way the MPC stores them.</p>
+    <p class="fineprint">Unofficial fan tool. Not affiliated with or endorsed by Akai Professional. Everything runs in your browser; nothing is uploaded.</p>
   </section>
-</div>
+</main>
 
 <!-- Order matters: core → audio → ui. Plain scripts so the page works from file:// with no build step. -->
 <script src="src/js/core/constants.js"></script>
@@ -149,8 +200,10 @@
 <script src="src/js/core/pgm.js"></script>
 <script src="src/js/audio/decode.js"></script>
 <script src="src/js/ui/save.js"></script>
+<script src="src/js/ui/wave.js"></script>
 <script src="src/js/ui/render.js"></script>
 <script src="src/js/ui/program.js"></script>
+<script src="src/js/ui/panel.js"></script>
 <script src="src/js/ui/app.js"></script>
 </body>
 </html>

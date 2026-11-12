@@ -4,6 +4,12 @@ Converts WAV / MP3 / FLAC / OGG / M4A files into Akai MPC2000XL-ready samples �
 8-character names — as standard `.WAV` or native `.SND`, bundled in a ZIP. Everything runs in the browser;
 nothing is uploaded.
 
+The page is styled as an MPC2000XL-like unit. The LCD shows the sound list (F1 / MAIN SCREEN) and
+the program editor (F2). The blue keypad sets the output (WAV/SND, mono, normalize, trim, dither),
+LOAD (orange) opens files (or drop them anywhere on the unit), the red keys save the sounds or the
+program, PLAY/STOP audition the selected pad, MAIN VOLUME sets preview volume, the note-variation
+fader tunes the selected pad and the DATA wheel nudges whichever program field is selected.
+
 It also builds **programs**: drag samples onto a 4×4 pad grid (banks A–D), set tune / attack / decay /
 voice overlap / volume / pan per pad, and download a ZIP with the `.PGM` and the `.SND` files it uses.
 Copy them to one folder on the card and load the `.PGM` with its sounds.
@@ -43,8 +49,10 @@ src/
     audio/decode.js     Web Audio decode + resample, preview playback
     ui/
       save.js           claude.ai downloads capability, or plain browser download
-      render.js         table rows + LCD memory meter
+      wave.js           waveform drawing on <canvas>
+      render.js         sound list rows + LCD memory meter
       program.js        pad grid, drag and drop, pad editor
+      panel.js          LCD screens on the F-keys, data wheel, volume knob
       app.js            state, settings, file intake, export, event wiring
 tests/e2e.test.mjs      headless Chrome end-to-end test
 ```

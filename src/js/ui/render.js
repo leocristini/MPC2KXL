@@ -30,7 +30,12 @@
       return d;
     };
 
-    td("src", it.file.name);
+    const src = document.createElement("div");
+    const srcName = document.createElement("span");
+    srcName.className = "src-name"; srcName.textContent = it.file.name;
+    src.appendChild(srcName);
+    if (it.out) src.appendChild(MPC.wave.canvasFor(it.out.chans, "wave-sm"));
+    td("src", src);
 
     if (it.error) {
       const p = document.createElement("span");

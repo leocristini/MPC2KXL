@@ -30,7 +30,7 @@
     src.buffer = b;
     src.playbackRate.value = Math.pow(2, (opts.tune || 0) / 120);
     const gain = a.createGain();
-    gain.gain.value = (opts.volume ?? 100) / 100;
+    gain.gain.value = ((opts.volume ?? 100) / 100) * master;
     let node = src.connect(gain);
     if (a.createStereoPanner) {
       const pan = a.createStereoPanner();
@@ -42,5 +42,13 @@
     playing = src;
   }
 
-  MPC.audio = { decodeFile, play };
+  // Preview volume (MAIN VOLUME knob), 0..1. Applies to the next sound played.
+  let master = 0.8;
+  const setVolume = (v) => { master = Math.max(0, Math.min(1, v)); };
+
+  function stop() {
+    if (playing) { try { playing.stop(); } catch (e) {} playing = null; }
+  }
+
+  MPC.audio = { decodeFile, play, stop, setVolume };
 })();

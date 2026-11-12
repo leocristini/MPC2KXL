@@ -47,10 +47,16 @@ const tableRows = () => page.$$eval("#rows tr", (trs) => trs.map((tr) =>
 async function downloadZip(button = "#dl") {
   const before = new Set(fs.readdirSync(dlDir));
   await page.click(button);
+  // Wait for the new ZIP to appear and finish writing (size non-zero and unchanged between polls).
+  let lastSize = -1;
   for (let i = 0; i < 50; i++) {
     const n = fs.readdirSync(dlDir).find((f) => !before.has(f) && f.endsWith(".zip"));
-    if (n) return path.join(dlDir, n);
-    await new Promise((r) => setTimeout(r, 200));
+    if (n) {
+      const size = fs.statSync(path.join(dlDir, n)).size;
+      if (size > 0 && size === lastSize) return path.join(dlDir, n);
+      lastSize = size;
+    }
+    await new Promise((r) => setTimeout(r, 150));
   }
   throw new Error("no download");
 }
@@ -176,7 +182,28 @@ test("program: drag samples onto pads, edit, swap, download PGM + SND", async ()
   assert.equal(p.notes.filter((n) => n[0] !== 0xFF).length, 3);
 });
 
+test("panel: F-keys switch screens, data wheel and fader edit the selected pad", async () => {
+  const visible = (sel) => page.$eval(sel, (e) => !e.hidden);
+  await page.click('.fkey[data-screen="sound"]');
+  assert.equal(await visible("#screen-sound"), true);
+  assert.equal(await visible("#screen-pgm"), false);
+
+  await page.click('.pad[data-pad="1"]');                       // hitting a pad opens the PGM screen
+  assert.equal(await visible("#screen-pgm"), true);
+  assert.equal(await page.$eval("#lcd-mode", (e) => e.textContent), "PROGRAM");
+
+  await page.focus("#pe-attack");                                // make Attack the wheel's target
+  const before = Number(await page.$eval("#pe-attack", (e) => e.value));
+  await page.$eval("#wheel", (w) => { for (let i = 0; i < 3; i++) w.dispatchEvent(new WheelEvent("wheel", { deltaY: -100, bubbles: true, cancelable: true })); });
+  assert.equal(Number(await page.$eval("#pe-attack", (e) => e.value)), before + 3);
+  assert.equal(await page.$eval("#wheel-target", (e) => e.textContent), "Attack");
+
+  await page.$eval("#nv-slider", (s) => { s.value = "25"; s.dispatchEvent(new Event("input", { bubbles: true })); });
+  assert.equal(await page.$eval("#pe-tune", (e) => e.value), "2.5");
+});
+
 test("program: removing a sample clears its pads", async () => {
+  await page.click('.fkey[data-screen="sound"]');
   await page.click("#rows tr:nth-child(2) button:last-child");   // Remove SNARE-TI
   assert.equal(await padName(1), "");
   assert.equal(await page.$eval("#pgm-count", (e) => e.textContent), "2 pads assigned");

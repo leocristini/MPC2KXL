@@ -75,6 +75,7 @@
     render();
 
     for (const it of state.items.filter((x) => !x.raw && !x.error)) {
+      MPC.view.setStatus("Loading " + it.file.name + " …");
       try {
         it.raw = await MPC.audio.decodeFile(it.file);
         it.out = MPC.dsp.processSample(it.raw, settings());
@@ -128,10 +129,28 @@
   drop.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
   });
-  fileInput.addEventListener("change", () => { addFiles(fileInput.files); fileInput.value = ""; });
-  ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("hot"); }));
-  ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("hot"); }));
-  drop.addEventListener("drop", (e) => { if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+  // Loaded files show up on the SOUND screen.
+  const insert = (files) => { MPC.panel.show("sound"); return addFiles(files); };
+  fileInput.addEventListener("change", () => { insert(fileInput.files); fileInput.value = ""; });
+
+  // Files can be dropped anywhere on the unit (pads handle their own drops and stop them there).
+  const device = $("device");
+  const hasFiles = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files");
+  let dragDepth = 0;
+  device.addEventListener("dragenter", (e) => { if (!hasFiles(e)) return; dragDepth++; device.classList.add("hot"); });
+  device.addEventListener("dragleave", () => { if (dragDepth && !--dragDepth) device.classList.remove("hot"); });
+  device.addEventListener("dragover", (e) => { if (hasFiles(e)) e.preventDefault(); });
+  device.addEventListener("drop", (e) => {
+    dragDepth = 0; device.classList.remove("hot");
+    if (!hasFiles(e) || !e.dataTransfer.files.length) return;
+    e.preventDefault();
+    insert(e.dataTransfer.files);
+  });
+  // A pad drop stops propagation, so also clear the overlay from the document.
+  document.addEventListener("drop", () => { dragDepth = 0; device.classList.remove("hot"); }, true);
+
+  $("stop").addEventListener("click", () => MPC.audio.stop());
+  $("play-pad").addEventListener("click", () => program.playSelected());
 
   document.querySelectorAll('input[name="fmt"], input[name="ch"], #opt-norm, #opt-trim, #opt-dither, #ram')
     .forEach((el) => el.addEventListener("change", reprocess));
@@ -143,6 +162,11 @@
   });
   $("dl").addEventListener("click", download);
   $("dl-pgm").addEventListener("click", downloadProgram);
+
+  // Waveform colours come from the theme: redraw when the system switches light/dark.
+  if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+  // Switching LCD screens: redraw so waveforms on the newly visible screen get sized.
+  document.addEventListener("mpc:screen", render);
 
   render();
   MPC.save.init();

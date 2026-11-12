@@ -74,12 +74,27 @@
       b.setAttribute("aria-pressed", i === selected ? "true" : "false");
       b.setAttribute("aria-label", padLabel(i) + (it ? ", " + it.name : ", empty"));
 
-      const label = document.createElement("span"); label.className = "pad-id"; label.textContent = padLabel(i);
+      // Printed legend above the pad ("PAD 13" … note number), then the rubber face.
+      const label = document.createElement("span"); label.className = "pad-id"; label.textContent = "PAD " + ((i % 16) + 1);
       const note = document.createElement("span"); note.className = "pad-note"; note.textContent = DEFAULT_PAD_NOTES[i];
+      const face = document.createElement("span"); face.className = "pad-face";
       const name = document.createElement("span"); name.className = "pad-name";
       name.textContent = it ? (it.error ? "ERROR" : it.out ? it.name : "…") : "";
-      b.append(label, note, name);
+      b.append(label, note, face, name);
       return b;
+    }
+
+    // Flash a pad like it was hit.
+    function hit(i) {
+      const b = document.querySelector(`.pad[data-pad="${i}"]`);
+      if (!b) return;
+      b.classList.remove("hit"); void b.offsetWidth; b.classList.add("hit");
+      b.addEventListener("animationend", () => b.classList.remove("hit"), { once: true });
+    }
+
+    function trigger(i) {
+      const p = pads[i], it = p && host.findItem(p.itemId);
+      if (it && it.out) { host.play(it, p); hit(i); }
     }
 
     function renderGrid() {
@@ -88,14 +103,19 @@
       for (const k of GRID_ORDER) grid.appendChild(padButton(bank * 16 + k));
       document.querySelectorAll('input[name="bank"]').forEach((r) => {
         const b = Number(r.value), n = pads.slice(b * 16, b * 16 + 16).filter(Boolean).length;
-        r.nextElementSibling.textContent = "ABCD"[b] + (n ? " · " + n : "");
+        r.nextElementSibling.querySelector(".lg").dataset.count = n ? String(n) : "";
         r.checked = b === bank;
       });
     }
 
     function renderEditor() {
       const p = pads[selected];
-      $("pe-title").textContent = padLabel(selected) + " · note " + DEFAULT_PAD_NOTES[selected];
+      $("pe-title").textContent = padLabel(selected) + " NOTE " + DEFAULT_PAD_NOTES[selected];
+      const cur = p && host.findItem(p.itemId);
+      $("pe-len").textContent = cur && cur.out ? (cur.out.chans[0].length / MPC.RATE).toFixed(2) + "s" : "EMPTY";
+      const wave = $("pe-wave");
+      if (cur && cur.out) MPC.wave.draw(wave, cur.out.chans);
+      else wave.getContext("2d").clearRect(0, 0, wave.width, wave.height);
 
       const sel = $("pe-sound");
       sel.textContent = "";
@@ -114,6 +134,10 @@
       $("pe-pan").value = v.pan;
       $("pe-volume-out").textContent = v.volume;
       $("pe-pan-out").textContent = v.pan === 50 ? "C" : v.pan < 50 ? "L" + (50 - v.pan) : "R" + (v.pan - 50);
+      // Note variation fader mirrors the pad's tune.
+      const nv = $("nv-slider");
+      nv.disabled = !p;
+      if (document.activeElement !== nv) nv.value = v.tune;
     }
 
     function render() {
@@ -130,9 +154,10 @@
 
     grid.addEventListener("click", (e) => {
       const i = padFrom(e); if (i < 0) return;
-      selected = i; render();
-      const p = pads[i], it = p && host.findItem(p.itemId);
-      if (it && it.out) host.play(it, p);
+      selected = i;
+      MPC.panel.show("pgm");   // triggers a redraw
+      render();
+      trigger(i);
     });
     grid.addEventListener("dragstart", (e) => {
       const i = padFrom(e); if (i < 0 || !pads[i]) return;
@@ -149,6 +174,7 @@
     grid.addEventListener("drop", (e) => {
       const i = padFrom(e); if (i < 0) return;
       e.preventDefault();
+      e.stopPropagation();   // the unit-wide file drop handler must not load these files again
       e.target.closest(".pad").classList.remove("hot");
       const dt = e.dataTransfer;
       if (dt.types.includes(MIME_PAD)) { const from = Number(dt.getData(MIME_PAD)); if (from !== i) swap(from, i); }
@@ -170,11 +196,16 @@
     field("pe-overlap", "overlap", (v) => v);
     field("pe-volume", "volume", Number);
     field("pe-pan", "pan", Number);
-    $("pe-play").addEventListener("click", () => { const p = pads[selected], it = p && host.findItem(p.itemId); if (it && it.out) host.play(it, p); });
+    $("pe-play").addEventListener("click", () => trigger(selected));
+    $("nv-slider").addEventListener("input", (e) => {
+      const p = pads[selected]; if (!p) return;
+      p.tune = Math.max(-120, Math.min(120, Number(e.target.value) | 0));
+      renderEditor();
+    });
     $("pe-clear").addEventListener("click", () => clearPad(selected));
     $("pgm-clear").addEventListener("click", clearAll);
 
-    return { render, removeItem, build };
+    return { render, removeItem, build, playSelected: () => trigger(selected) };
   }
 
   MPC.program = { create, MIME_ITEM };
