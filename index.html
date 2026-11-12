@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MPC2000XL Sample Prep</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="src/styles/main.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="unit">
+    <div>
+      <h1><b>MPC2000XL</b> Sample Prep</h1>
+      <p class="sub">Drop WAV, MP3, AIFF or FLAC files. They come out as 16-bit / 44.1 kHz WAV or native .SND with 8-character names, zipped and ready to copy to your card.</p>
+    </div>
+    <div class="lcd" id="lcd" aria-live="polite">
+      <div class="row"><span>SAMPLE MEM</span><span id="memLabel">0.00 / 2.00 MB</span></div>
+      <div class="bar"><i id="memBar"></i></div>
+      <div class="row"><span id="memCount">0 SOUNDS</span><span id="memTime">0.0 s MONO</span></div>
+    </div>
+  </header>
+
+  <section class="box settings" aria-label="Output settings">
+    <div class="field"><span>Format</span>
+      <div class="seg" role="radiogroup">
+        <input type="radio" name="fmt" id="fmt-wav" value="wav" checked><label for="fmt-wav">WAV</label>
+        <input type="radio" name="fmt" id="fmt-snd" value="snd"><label for="fmt-snd">.SND</label>
+      </div>
+    </div>
+    <div class="field"><span>Channels</span>
+      <div class="seg" role="radiogroup">
+        <input type="radio" name="ch" id="ch-mono" value="mono" checked><label for="ch-mono">Mono</label>
+        <input type="radio" name="ch" id="ch-keep" value="keep"><label for="ch-keep">Keep</label>
+      </div>
+    </div>
+    <div class="field"><span>MPC RAM</span>
+      <select id="ram">
+        <option value="2">2 MB (stock)</option>
+        <option value="8">8 MB</option>
+        <option value="16">16 MB</option>
+        <option value="32">32 MB (max)</option>
+      </select>
+    </div>
+    <div class="field"><span>Processing</span>
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="opt-norm" checked> Normalize</label>
+        <label class="check"><input type="checkbox" id="opt-trim" checked> Trim silence</label>
+        <label class="check"><input type="checkbox" id="opt-dither" checked> Dither</label>
+      </div>
+    </div>
+  </section>
+
+  <section class="box stack">
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add audio files">
+      <strong>Drop samples here</strong> or click to choose files
+      <input type="file" id="file" accept="audio/*,.wav,.mp3,.aif,.aiff,.flac,.ogg,.m4a" multiple hidden>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Source</th><th>MPC name</th><th>Length</th><th>Ch</th><th>Out size</th><th>Peak</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty">No samples yet. Example: <code>Kick Dusty 01.mp3</code> becomes <code>KICKDUST.WAV</code>, mono, 16-bit, 44.1 kHz.</div>
+    </div>
+    <div class="actions">
+      <span class="status" id="status">Files are processed in your browser and never uploaded.</span>
+      <div class="row-gap">
+        <button id="clear" type="button">Clear all</button>
+        <button id="dl" class="primary" type="button" disabled>Download ZIP</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="notes" aria-label="Notes">
+    <p><strong>Loading on the MPC:</strong> unzip, copy the files to the root of a FAT16 card or partition (SCSI2SD / CF mod), then LOAD on the MPC. With a Gotek, put them inside 1.44 MB floppy images; one image holds about 16 s of mono audio.</p>
+    <p><strong>WAV or .SND:</strong> the 2000XL reads both. WAV is the safest choice. .SND files use the native 42-byte header (name, level 100, tune 0, end point set to full length, loop off). Stereo .SND writes the left channel then the right, the way the MPC stores them.</p>
+  </section>
+</div>
+
+<!-- Order matters: core → audio → ui. Plain scripts so the page works from file:// with no build step. -->
+<script src="src/js/core/constants.js"></script>
+<script src="src/js/core/pcm.js"></script>
+<script src="src/js/core/wav.js"></script>
+<script src="src/js/core/snd.js"></script>
+<script src="src/js/core/zip.js"></script>
+<script src="src/js/core/names.js"></script>
+<script src="src/js/core/process.js"></script>
+<script src="src/js/audio/decode.js"></script>
+<script src="src/js/ui/save.js"></script>
+<script src="src/js/ui/render.js"></script>
+<script src="src/js/ui/app.js"></script>
+</body>
+</html>
